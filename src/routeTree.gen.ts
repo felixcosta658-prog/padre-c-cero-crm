@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as DespesasRouteImport } from './routes/despesas'
+import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as FuncionariosRouteImport } from './routes/funcionarios'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +31,16 @@ const ContratosRoute = ContratosRouteImport.update({
   path: '/contratos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DespesasRoute = DespesasRouteImport.update({
+  id: '/despesas',
+  path: '/despesas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EstoqueRoute = EstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FuncionariosRoute = FuncionariosRouteImport.update({
   id: '/funcionarios',
   path: '/funcionarios',
@@ -39,12 +51,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
   '/contratos': typeof ContratosRoute
+  '/despesas': typeof DespesasRoute
+  '/estoque': typeof EstoqueRoute
   '/funcionarios': typeof FuncionariosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
   '/contratos': typeof ContratosRoute
+  '/despesas': typeof DespesasRoute
+  '/estoque': typeof EstoqueRoute
   '/funcionarios': typeof FuncionariosRoute
 }
 export interface FileRoutesById {
@@ -52,20 +68,43 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
   '/contratos': typeof ContratosRoute
+  '/despesas': typeof DespesasRoute
+  '/estoque': typeof EstoqueRoute
   '/funcionarios': typeof FuncionariosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/clientes' | '/contratos' | '/funcionarios'
+  fullPaths:
+    | '/'
+    | '/clientes'
+    | '/contratos'
+    | '/despesas'
+    | '/estoque'
+    | '/funcionarios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clientes' | '/contratos' | '/funcionarios'
-  id: '__root__' | '/' | '/clientes' | '/contratos' | '/funcionarios'
+  to:
+    | '/'
+    | '/clientes'
+    | '/contratos'
+    | '/despesas'
+    | '/estoque'
+    | '/funcionarios'
+  id:
+    | '__root__'
+    | '/'
+    | '/clientes'
+    | '/contratos'
+    | '/despesas'
+    | '/estoque'
+    | '/funcionarios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientesRoute: typeof ClientesRoute
   ContratosRoute: typeof ContratosRoute
+  DespesasRoute: typeof DespesasRoute
+  EstoqueRoute: typeof EstoqueRoute
   FuncionariosRoute: typeof FuncionariosRoute
 }
 
@@ -92,6 +131,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContratosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/despesas': {
+      id: '/despesas'
+      path: '/despesas'
+      fullPath: '/despesas'
+      preLoaderRoute: typeof DespesasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/estoque': {
+      id: '/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof EstoqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/funcionarios': {
       id: '/funcionarios'
       path: '/funcionarios'
@@ -106,8 +159,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientesRoute: ClientesRoute,
   ContratosRoute: ContratosRoute,
+  DespesasRoute: DespesasRoute,
+  EstoqueRoute: EstoqueRoute,
   FuncionariosRoute: FuncionariosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

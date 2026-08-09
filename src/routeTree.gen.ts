@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as FuncionariosRouteImport } from './routes/funcionarios'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +24,49 @@ const ClientesRoute = ClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContratosRoute = ContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuncionariosRoute = FuncionariosRouteImport.update({
+  id: '/funcionarios',
+  path: '/funcionarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
+  '/contratos': typeof ContratosRoute
+  '/funcionarios': typeof FuncionariosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
+  '/contratos': typeof ContratosRoute
+  '/funcionarios': typeof FuncionariosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/clientes': typeof ClientesRoute
+  '/contratos': typeof ContratosRoute
+  '/funcionarios': typeof FuncionariosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/clientes'
+  fullPaths: '/' | '/clientes' | '/contratos' | '/funcionarios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clientes'
-  id: '__root__' | '/' | '/clientes'
+  to: '/' | '/clientes' | '/contratos' | '/funcionarios'
+  id: '__root__' | '/' | '/clientes' | '/contratos' | '/funcionarios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientesRoute: typeof ClientesRoute
+  ContratosRoute: typeof ContratosRoute
+  FuncionariosRoute: typeof FuncionariosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +85,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contratos': {
+      id: '/contratos'
+      path: '/contratos'
+      fullPath: '/contratos'
+      preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funcionarios': {
+      id: '/funcionarios'
+      path: '/funcionarios'
+      fullPath: '/funcionarios'
+      preLoaderRoute: typeof FuncionariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientesRoute: ClientesRoute,
+  ContratosRoute: ContratosRoute,
+  FuncionariosRoute: FuncionariosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

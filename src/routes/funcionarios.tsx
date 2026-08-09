@@ -168,7 +168,10 @@ function FuncionariosPage() {
               </Button>
               <Button
                 onClick={() => {
-                  if (!draft.nome.trim()) return toast.error("Informe o nome.");
+                  if (!draft.nome.trim()) {
+                    toast.error("Informe o nome.");
+                    return;
+                  }
                   add(draft);
                   setDraft(null);
                   toast.success("Funcionário cadastrado");

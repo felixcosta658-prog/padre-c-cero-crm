@@ -145,7 +145,10 @@ function ContratosPage() {
               </Button>
               <Button
                 onClick={() => {
-                  if (!draft.cliente.trim()) return toast.error("Informe o cliente.");
+                  if (!draft.cliente.trim()) {
+                    toast.error("Informe o cliente.");
+                    return;
+                  }
                   add(draft);
                   setDraft(null);
                   toast.success("Contrato cadastrado");

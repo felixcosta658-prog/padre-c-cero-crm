@@ -67,7 +67,7 @@ export function exportContractPdf(c: Contract) {
     .header{display:flex;justify-content:space-between;align-items:center;gap:24px;background:#2D3338;color:#fff;border-radius:10px 10px 0 0;padding:20px 24px}
     .brand{display:flex;align-items:center;gap:12px}
     .brand .name{font-size:12px;font-weight:600;color:rgba(255,255,255,.75);margin:0}
-    .brand .sub{color:#e8a87c;font-size:17px;font-weight:800;margin:0;line-height:1.2}
+    .brand .sub{color:#B28259;font-size:17px;font-weight:800;margin:0;line-height:1.2}
     .meta{text-align:right;font-size:13px}
     .meta .title{font-weight:700;font-size:15px;margin:0}
     .meta .dim{color:rgba(255,255,255,.7);margin:2px 0 0}
@@ -89,10 +89,10 @@ export function exportContractPdf(c: Contract) {
   <div class="header">
     <div class="brand">
       <svg width="38" height="38" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="22" cy="22" r="20" stroke="#e8a87c" stroke-width="4.5" opacity="0.85" fill="none"/>
-        <circle cx="22" cy="22" r="14.5" stroke="#e8a87c" stroke-width="3.5" opacity="0.55" fill="none"/>
-        <circle cx="22" cy="22" r="9.5" stroke="#e8a87c" stroke-width="3" opacity="0.75" fill="none"/>
-        <circle cx="22" cy="22" r="5" stroke="#e8a87c" stroke-width="2.5" opacity="0.5" fill="none"/>
+        <circle cx="22" cy="22" r="20" stroke="#B28259" stroke-width="4.5" opacity="0.85" fill="none"/>
+        <circle cx="22" cy="22" r="14.5" stroke="#B28259" stroke-width="3.5" opacity="0.55" fill="none"/>
+        <circle cx="22" cy="22" r="9.5" stroke="#B28259" stroke-width="3" opacity="0.75" fill="none"/>
+        <circle cx="22" cy="22" r="5" stroke="#B28259" stroke-width="2.5" opacity="0.5" fill="none"/>
         <circle cx="22" cy="22" r="1.8" fill="#fff"/>
       </svg>
       <div>

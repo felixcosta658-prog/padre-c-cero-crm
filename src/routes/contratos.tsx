@@ -68,20 +68,20 @@ const novo = (): Contract => ({
 
 const columnTone: Record<ContractStatus, string> = {
   Ativo: "bg-primary text-primary-foreground",
-  "Em produção": "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  Finalizado: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  "Em produção": "bg-yellow-500/25 text-yellow-700 dark:text-yellow-300",
+  Finalizado: "bg-emerald-500/25 text-emerald-600 dark:text-emerald-300",
 };
 
 const columnBg: Record<ContractStatus, string> = {
   Ativo: "bg-secondary/40",
-  "Em produção": "bg-amber-500/5 border-amber-900/15 dark:border-amber-400/20",
-  Finalizado: "bg-emerald-500/5 border-emerald-900/15 dark:border-emerald-400/20",
+  "Em produção": "bg-yellow-500/10 border-yellow-900/15 dark:border-yellow-400/20",
+  Finalizado: "bg-emerald-500/10 border-emerald-900/15 dark:border-emerald-400/20",
 };
 
 const columnDot: Record<ContractStatus, string> = {
   Ativo: "bg-primary",
-  "Em produção": "bg-amber-500/70",
-  Finalizado: "bg-emerald-500/70",
+  "Em produção": "bg-yellow-500",
+  Finalizado: "bg-emerald-500",
 };
 
 function ContratosPage() {

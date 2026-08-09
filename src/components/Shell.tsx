@@ -44,10 +44,10 @@ export function BrandLogo({ size = 44 }: { size?: number }) {
   const cy = size / 2;
   // Rings from outer to inner – alternating filled / gap
   const rings = [
-    { r: 20, stroke: "#e8a87c", width: 4.5, opacity: 0.85 },
-    { r: 14.5, stroke: "#e8a87c", width: 3.5, opacity: 0.55 },
-    { r: 9.5, stroke: "#e8a87c", width: 3, opacity: 0.75 },
-    { r: 5, stroke: "#e8a87c", width: 2.5, opacity: 0.5 },
+    { r: 20, stroke: "#B28259", width: 4.5, opacity: 0.85 },
+    { r: 14.5, stroke: "#B28259", width: 3.5, opacity: 0.55 },
+    { r: 9.5, stroke: "#B28259", width: 3, opacity: 0.75 },
+    { r: 5, stroke: "#B28259", width: 2.5, opacity: 0.5 },
   ];
   const scale = size / 44;
   return (

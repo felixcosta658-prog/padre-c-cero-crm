@@ -58,7 +58,7 @@ export type Client = {
 export type ContractStatus = "Ativo" | "Em produção" | "Finalizado";
 
 export const CONTRACT_STATUSES: { id: ContractStatus; label: string }[] = [
-  { id: "Ativo", label: "Ativos" },
+  { id: "Ativo", label: "Pausado" },
   { id: "Em produção", label: "Em produção" },
   { id: "Finalizado", label: "Finalizados" },
 ];
@@ -245,9 +245,9 @@ export const seedContracts: Contract[] = [
     id: "k3",
     createdAt: daysFromNow(-90),
     numero: "CT-0018",
-    quantidade: 300,
+    quantidade: 500,
     cliente: "Agro Lar Ferragens",
-    valor: 8400,
+    valor: 4800,
     inicio: daysFromNow(-90),
     fim: daysFromNow(-10),
     status: "Finalizado",

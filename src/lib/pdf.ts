@@ -29,15 +29,15 @@ export function exportClientsPdf(clients: Client[]) {
   <title>Pedidos - Fabrica de cabos Padre Cicero</title>
   <style>
     *{box-sizing:border-box}
-    body{font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#14224a;padding:32px}
+    body{font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#2D3338;padding:32px}
     h1{font-size:20px;margin:0}
-    .sub{color:#5c6a8f;font-size:12px;margin:4px 0 20px}
+    .sub{color:#6b7280;font-size:12px;margin:4px 0 20px}
     table{width:100%;border-collapse:collapse;font-size:12px}
-    th{text-align:left;background:#16284d;color:#fff;padding:8px}
-    td{padding:8px;border-bottom:1px solid #e3e8f0;vertical-align:top}
-    .dim{color:#7c89a6}
+    th{text-align:left;background:#2D3338;color:#fff;padding:8px}
+    td{padding:8px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+    .dim{color:#8b949e}
     .r{text-align:right}
-    tfoot td{font-weight:700;border-top:2px solid #16284d}
+    tfoot td{font-weight:700;border-top:2px solid #2D3338}
   </style></head><body>
   <h1>Fábrica de Cabos Padre Cícero</h1>
   <div class="sub">Relatório de pedidos — ${new Date().toLocaleString("pt-BR")}</div>
@@ -64,27 +64,27 @@ export function exportContractPdf(c: Contract) {
   <style>
     *{box-sizing:border-box}
     body{font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#1b1f23;background:#fff;padding:32px;max-width:760px;margin:0 auto}
-    .header{display:flex;justify-content:space-between;align-items:center;gap:24px;background:#16284d;color:#fff;border-radius:10px 10px 0 0;padding:20px 24px}
+    .header{display:flex;justify-content:space-between;align-items:center;gap:24px;background:#2D3338;color:#fff;border-radius:10px 10px 0 0;padding:20px 24px}
     .brand{display:flex;align-items:center;gap:12px}
     .brand .name{font-size:12px;font-weight:600;color:rgba(255,255,255,.75);margin:0}
     .brand .sub{color:#e8a87c;font-size:17px;font-weight:800;margin:0;line-height:1.2}
     .meta{text-align:right;font-size:13px}
     .meta .title{font-weight:700;font-size:15px;margin:0}
     .meta .dim{color:rgba(255,255,255,.7);margin:2px 0 0}
-    .body{background:#fff;border:1px solid #dbe2f0;border-top:none;border-radius:0 0 10px 10px;padding:8px 24px 24px}
+    .body{background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:8px 24px 24px}
     .section{margin-top:20px}
-    .section h2{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#16284d;border-bottom:2px solid #16284d33;padding-bottom:6px;margin:0 0 12px;font-weight:700}
+    .section h2{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2D3338;border-bottom:2px solid #2D3338;padding-bottom:6px;margin:0 0 12px;font-weight:700}
     .grid{display:flex;flex-wrap:wrap;column-gap:40px}
     .row{display:flex;justify-content:space-between;gap:24px;padding:3px 0;font-size:13px;flex:1 1 45%}
-    .row .k{color:#5b666f;min-width:150px}
+    .row .k{color:#6b7280;min-width:150px}
     .row .v{font-weight:600;text-align:right}
     .obs{margin-top:10px;font-size:13px;white-space:pre-wrap;line-height:1.5}
     .sig{display:flex;gap:48px;margin-top:28px}
     .sig>div{flex:1}
-    .sig .lbl{font-size:11px;color:#5b666f;margin-bottom:4px}
+    .sig .lbl{font-size:11px;color:#6b7280;margin-bottom:4px}
     .sig .name{font-size:13px;font-weight:600}
-    .sig .line{border-bottom:2px solid #16284d;margin-top:28px}
-    .footer{margin-top:28px;text-align:center;font-size:11px;font-weight:500;color:#fff;background:#16284d;border-radius:0 0 10px 10px;padding:10px 12px}
+    .sig .line{border-bottom:2px solid #2D3338;margin-top:28px}
+    .footer{margin-top:28px;text-align:center;font-size:11px;font-weight:500;color:#fff;background:#2D3338;border-radius:0 0 10px 10px;padding:10px 12px}
   </style></head><body>
   <div class="header">
     <div class="brand">

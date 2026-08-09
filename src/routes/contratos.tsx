@@ -247,7 +247,7 @@ function ContratosPage() {
               <DialogTitle className="text-center">Pedido no {viewing.numero}</DialogTitle>
             </DialogHeader>
 
-            <div className="overflow-hidden rounded-xl border border-border bg-white text-[#14224a] shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-white text-[#2D3338] shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-4 bg-primary px-5 py-4 text-primary-foreground">
                 <div className="flex min-w-0 items-center gap-3">
                   <BrandLogo size={40} />

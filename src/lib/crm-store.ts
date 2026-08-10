@@ -10,33 +10,7 @@ export const STAGES: { id: Stage; label: string }[] = [
 ];
 
 export const UFS = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
 ];
 
 export type Client = {
@@ -55,28 +29,15 @@ export type Client = {
   stage: Stage;
 };
 
-export type ContractStatus = "Ativo" | "Em produção" | "Finalizado";
-
-export const CONTRACT_STATUSES: { id: ContractStatus; label: string }[] = [
-  { id: "Ativo", label: "Pausado" },
-  { id: "Em produção", label: "Em produção" },
-  { id: "Finalizado", label: "Finalizados" },
-];
-
-export const normalizeContractStatus = (s: string): ContractStatus =>
-  s === "Em produção" || s === "Finalizado" ? s : s === "Encerrado" ? "Finalizado" : "Ativo";
-
 export type Contract = {
   id: string;
   createdAt: string;
   numero: string;
-  quantidade: number;
   cliente: string;
   valor: number;
   inicio: string;
   fim: string;
-  status: ContractStatus;
-  observacoes: string;
+  status: string;
 };
 
 export type Employee = {
@@ -155,196 +116,53 @@ const daysFromNow = (n: number) => iso(new Date(Date.now() + n * 86400000));
 
 export const seedClients: Client[] = [
   {
-    id: "c1",
-    createdAt: daysFromNow(-12),
-    pedido: "PED-1001",
-    nome: "João Batista",
-    email: "joao@agrolar.com.br",
-    telefone: "(88) 99811-2233",
-    empresa: "Agro Lar Ferragens",
-    cidade: "Juazeiro do Norte",
-    uf: "CE",
-    valor: 4800,
-    entrega: daysFromNow(3),
-    observacoes: "500 cabos de enxada, madeira tratada.",
-    stage: "proposta",
+    id: "c1", createdAt: daysFromNow(-12), pedido: "PED-1001", nome: "João Batista",
+    email: "joao@agrolar.com.br", telefone: "(88) 99811-2233", empresa: "Agro Lar Ferragens",
+    cidade: "Juazeiro do Norte", uf: "CE", valor: 4800, entrega: daysFromNow(3),
+    observacoes: "500 cabos de enxada, madeira tratada.", stage: "proposta",
   },
   {
-    id: "c2",
-    createdAt: daysFromNow(-30),
-    pedido: "PED-1002",
-    nome: "Maria Souza",
-    email: "maria@construsertao.com",
-    telefone: "(87) 99744-1100",
-    empresa: "Constru Sertão",
-    cidade: "Petrolina",
-    uf: "PE",
-    valor: 12750,
-    entrega: daysFromNow(10),
-    observacoes: "Cabos de marreta, entrega parcelada.",
-    stage: "ganho",
+    id: "c2", createdAt: daysFromNow(-30), pedido: "PED-1002", nome: "Maria Souza",
+    email: "maria@construsertao.com", telefone: "(87) 99744-1100", empresa: "Constru Sertão",
+    cidade: "Petrolina", uf: "PE", valor: 12750, entrega: daysFromNow(10),
+    observacoes: "Cabos de marreta, entrega parcelada.", stage: "ganho",
   },
   {
-    id: "c3",
-    createdAt: daysFromNow(-4),
-    pedido: "PED-1003",
-    nome: "Antônio Ferreira",
-    email: "antonio@ferragensbr.com",
-    telefone: "(85) 98800-4455",
-    empresa: "Ferragens BR",
-    cidade: "Fortaleza",
-    uf: "CE",
-    valor: 3200,
-    entrega: daysFromNow(15),
-    observacoes: "Primeiro contato pela feira.",
-    stage: "novo",
+    id: "c3", createdAt: daysFromNow(-4), pedido: "PED-1003", nome: "Antônio Ferreira",
+    email: "antonio@ferragensbr.com", telefone: "(85) 98800-4455", empresa: "Ferragens BR",
+    cidade: "Fortaleza", uf: "CE", valor: 3200, entrega: daysFromNow(15),
+    observacoes: "Primeiro contato pela feira.", stage: "novo",
   },
   {
-    id: "c4",
-    createdAt: daysFromNow(-60),
-    pedido: "PED-1004",
-    nome: "Carla Mendes",
-    email: "carla@lojaverde.com",
-    telefone: "(83) 99666-7788",
-    empresa: "Loja Verde",
-    cidade: "Campina Grande",
-    uf: "PB",
-    valor: 2100,
-    entrega: daysFromNow(-5),
-    observacoes: "Preço acima do orçamento do cliente.",
-    stage: "perdido",
+    id: "c4", createdAt: daysFromNow(-60), pedido: "PED-1004", nome: "Carla Mendes",
+    email: "carla@lojaverde.com", telefone: "(83) 99666-7788", empresa: "Loja Verde",
+    cidade: "Campina Grande", uf: "PB", valor: 2100, entrega: daysFromNow(-5),
+    observacoes: "Preço acima do orçamento do cliente.", stage: "perdido",
   },
 ];
 
 export const seedContracts: Contract[] = [
-  {
-    id: "k1",
-    createdAt: daysFromNow(-30),
-    numero: "CT-0021",
-    quantidade: 500,
-    cliente: "Constru Sertão",
-    valor: 12750,
-    inicio: daysFromNow(-30),
-    fim: daysFromNow(60),
-    status: "Ativo",
-    observacoes: "Cabos de marreta, entrega parcelada.",
-  },
-  {
-    id: "k2",
-    createdAt: daysFromNow(-15),
-    numero: "CT-0023",
-    quantidade: 1200,
-    cliente: "Ferragens BR",
-    valor: 3200,
-    inicio: daysFromNow(-15),
-    fim: daysFromNow(45),
-    status: "Em produção",
-    observacoes: "Primeiro contato pela feira.",
-  },
-  {
-    id: "k3",
-    createdAt: daysFromNow(-90),
-    numero: "CT-0018",
-    quantidade: 500,
-    cliente: "Agro Lar Ferragens",
-    valor: 4800,
-    inicio: daysFromNow(-90),
-    fim: daysFromNow(-10),
-    status: "Finalizado",
-    observacoes: "500 cabos de enxada, madeira tratada.",
-  },
+  { id: "k1", createdAt: daysFromNow(-30), numero: "CT-0021", cliente: "Constru Sertão", valor: 12750, inicio: daysFromNow(-30), fim: daysFromNow(60), status: "Ativo" },
+  { id: "k2", createdAt: daysFromNow(-90), numero: "CT-0018", cliente: "Agro Lar Ferragens", valor: 8400, inicio: daysFromNow(-90), fim: daysFromNow(-10), status: "Encerrado" },
 ];
 
 export const seedEmployees: Employee[] = [
-  {
-    id: "e1",
-    nome: "Francisco Alves",
-    funcao: "Torneiro",
-    telefone: "(88) 99100-0011",
-    admissao: daysFromNow(-800),
-    meta: 400,
-    producao: 372,
-  },
-  {
-    id: "e2",
-    nome: "Raimunda Lima",
-    funcao: "Acabamento",
-    telefone: "(88) 99100-0022",
-    admissao: daysFromNow(-420),
-    meta: 350,
-    producao: 361,
-  },
-  {
-    id: "e3",
-    nome: "Pedro Henrique",
-    funcao: "Envernizamento",
-    telefone: "(88) 99100-0033",
-    admissao: daysFromNow(-120),
-    meta: 300,
-    producao: 240,
-  },
+  { id: "e1", nome: "Francisco Alves", funcao: "Torneiro", telefone: "(88) 99100-0011", admissao: daysFromNow(-800), meta: 400, producao: 372 },
+  { id: "e2", nome: "Raimunda Lima", funcao: "Acabamento", telefone: "(88) 99100-0022", admissao: daysFromNow(-420), meta: 350, producao: 361 },
+  { id: "e3", nome: "Pedro Henrique", funcao: "Envernizamento", telefone: "(88) 99100-0033", admissao: daysFromNow(-120), meta: 300, producao: 240 },
 ];
 
 export const seedStock: StockItem[] = [
-  {
-    id: "s1",
-    nome: "Verniz fosco",
-    unidade: "L",
-    quantidade: 48,
-    minimo: 30,
-    fornecedor: "Tintas Cariri",
-  },
-  {
-    id: "s2",
-    nome: "Sacos",
-    unidade: "un",
-    quantidade: 1200,
-    minimo: 500,
-    fornecedor: "Embalagens JN",
-  },
-  {
-    id: "s3",
-    nome: "Fita adesiva",
-    unidade: "rolo",
-    quantidade: 18,
-    minimo: 25,
-    fornecedor: "Embalagens JN",
-  },
-  {
-    id: "s4",
-    nome: "Lixas 120",
-    unidade: "un",
-    quantidade: 210,
-    minimo: 100,
-    fornecedor: "Ferragens BR",
-  },
+  { id: "s1", nome: "Verniz fosco", unidade: "L", quantidade: 48, minimo: 30, fornecedor: "Tintas Cariri" },
+  { id: "s2", nome: "Sacos plásticos", unidade: "un", quantidade: 1200, minimo: 500, fornecedor: "Embalagens JN" },
+  { id: "s3", nome: "Fita adesiva", unidade: "rolo", quantidade: 18, minimo: 25, fornecedor: "Embalagens JN" },
+  { id: "s4", nome: "Lixas 120", unidade: "un", quantidade: 210, minimo: 100, fornecedor: "Ferragens BR" },
 ];
 
 export const seedExpenses: Expense[] = [
-  {
-    id: "d1",
-    data: daysFromNow(-5),
-    descricao: "Compra de madeira bruta",
-    categoria: "Matéria-prima",
-    valor: 5400,
-    pago: true,
-  },
-  {
-    id: "d2",
-    data: daysFromNow(-2),
-    descricao: "Energia elétrica",
-    categoria: "Operacional",
-    valor: 1280,
-    pago: false,
-  },
-  {
-    id: "d3",
-    data: daysFromNow(-1),
-    descricao: "Manutenção do torno",
-    categoria: "Manutenção",
-    valor: 640,
-    pago: true,
-  },
+  { id: "d1", data: daysFromNow(-5), descricao: "Compra de madeira bruta", categoria: "Matéria-prima", valor: 5400, pago: true },
+  { id: "d2", data: daysFromNow(-2), descricao: "Energia elétrica", categoria: "Operacional", valor: 1280, pago: false },
+  { id: "d3", data: daysFromNow(-1), descricao: "Manutenção do torno", categoria: "Manutenção", valor: 640, pago: true },
 ];
 
 export const brl = (v: number) =>

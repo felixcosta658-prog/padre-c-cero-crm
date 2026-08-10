@@ -1,7 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, FileText, HardHat, Boxes, Receipt, Menu, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  HardHat,
+  Boxes,
+  Receipt,
+  Menu,
+  X,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { LogoMark, LogoLockup } from "@/components/Logo";
+
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -39,57 +50,15 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function BrandLogo({ size = 44 }: { size?: number }) {
-  const cx = size / 2;
-  const cy = size / 2;
-  // Rings from outer to inner – alternating filled / gap
-  const rings = [
-    { r: 20, stroke: "#B28259", width: 4.5, opacity: 0.85 },
-    { r: 14.5, stroke: "#B28259", width: 3.5, opacity: 0.55 },
-    { r: 9.5, stroke: "#B28259", width: 3, opacity: 0.75 },
-    { r: 5, stroke: "#B28259", width: 2.5, opacity: 0.5 },
-  ];
-  const scale = size / 44;
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {rings.map((ring, i) => (
-        <circle
-          key={i}
-          cx={cx}
-          cy={cy}
-          r={ring.r * scale}
-          stroke={ring.stroke}
-          strokeWidth={ring.width * scale}
-          opacity={ring.opacity}
-          fill="none"
-        />
-      ))}
-      {/* centre dot */}
-      <circle cx={cx} cy={cy} r={1.8 * scale} fill="#fff" />
-    </svg>
-  );
-}
-
 function Brand() {
   return (
     <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-4">
-      <div className="shrink-0">
-        <BrandLogo size={44} />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-xs font-medium text-sidebar-foreground/80">Fábrica de cabos</p>
-        <p className="truncate text-[15px] font-extrabold text-sidebar-primary">Padre Cicero</p>
-      </div>
+      <LogoMark className="h-10 w-10 shrink-0" />
+      <LogoLockup className="min-w-0" />
     </div>
   );
 }
+
 
 export function Shell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);

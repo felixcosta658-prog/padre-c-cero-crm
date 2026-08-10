@@ -5,15 +5,11 @@ import {
   brl,
   fmtDate,
   seedClients,
-  seedContracts,
   seedExpenses,
   seedStock,
   STAGES,
   useCollection,
-  normalizeContractStatus,
-  CONTRACT_STATUSES,
   type Client,
-  type Contract,
   type Expense,
   type StockItem,
 } from "@/lib/crm-store";
@@ -37,30 +33,10 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
-const diasRestantes = (data: string): number => {
-  if (!data) return 0;
-  const [y, m, d] = data.slice(0, 10).split("-").map(Number);
-  const alvo = new Date(y, m - 1, d);
-  return Math.round((alvo.getTime() - Date.now()) / 86400000);
-};
-
-const prodTone: Record<string, string> = {
-  Ativo: "bg-primary text-primary-foreground",
-  "Em produção": "bg-yellow-500/25 text-yellow-700 dark:text-yellow-300",
-  Finalizado: "bg-emerald-500/25 text-emerald-600 dark:text-emerald-300",
-};
-
 function Dashboard() {
   const { items: clients } = useCollection<Client>("crm.clients", seedClients);
   const { items: stock } = useCollection<StockItem>("crm.stock", seedStock);
   const { items: expenses } = useCollection<Expense>("crm.expenses", seedExpenses);
-  const { items: contracts } = useCollection<Contract>("crm.contracts", seedContracts);
-
-  const statusPorCliente = new Map<string, string>(
-    contracts.map((k) => [k.cliente, normalizeContractStatus(k.status)]),
-  );
-
-  const valorPorCliente = new Map<string, number>(contracts.map((k) => [k.cliente, k.valor]));
 
   const ganhos = clients.filter((c) => c.stage === "ganho");
   const abertos = clients.filter((c) => c.stage === "novo" || c.stage === "proposta");
@@ -143,43 +119,21 @@ function Dashboard() {
                 <th className="pb-2">Cliente</th>
                 <th className="pb-2">Etapa</th>
                 <th className="pb-2">Entrega</th>
-                <th className="pb-2">Restam</th>
                 <th className="pb-2 text-right">Valor</th>
               </tr>
             </thead>
             <tbody>
-              {proximos.map((c) => {
-                const status =
-                  statusPorCliente.get(c.empresa) ?? statusPorCliente.get(c.nome) ?? "Ativo";
-                return (
-                  <tr key={c.id} className="border-t border-border">
-                    <td className="py-2.5 font-medium">{c.pedido}</td>
-                    <td className="py-2.5">{c.nome}</td>
-                    <td className="py-2.5">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          prodTone[status] ?? "bg-secondary text-secondary-foreground"
-                        }`}
-                      >
-                        {CONTRACT_STATUSES.find((s) => s.id === status)?.label ?? status}
-                      </span>
-                    </td>
-                    <td className="py-2.5">{fmtDate(c.entrega)}</td>
-                    <td className="py-2.5">
-                      {diasRestantes(c.entrega) < 0 ? (
-                        <span className="text-accent">Atrasado</span>
-                      ) : diasRestantes(c.entrega) === 0 ? (
-                        <span className="font-semibold text-accent">Hoje</span>
-                      ) : (
-                        <span>{diasRestantes(c.entrega)} dias</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 text-right font-semibold">
-                      {brl(valorPorCliente.get(c.empresa) ?? valorPorCliente.get(c.nome) ?? c.valor)}
-                    </td>
-                  </tr>
-                );
-              })}
+              {proximos.map((c) => (
+                <tr key={c.id} className="border-t border-border">
+                  <td className="py-2.5 font-medium">{c.pedido}</td>
+                  <td className="py-2.5">{c.nome}</td>
+                  <td className="py-2.5 text-muted-foreground">
+                    {STAGES.find((s) => s.id === c.stage)?.label}
+                  </td>
+                  <td className="py-2.5">{fmtDate(c.entrega)}</td>
+                  <td className="py-2.5 text-right font-semibold">{brl(c.valor)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

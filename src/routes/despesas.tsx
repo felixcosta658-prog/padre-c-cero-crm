@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Trash2, Receipt, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Receipt, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, StatCard } from "@/components/Shell";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { brl, fmtDate, seedExpenses, uid, useCollection, type Expense } from "@/lib/crm-store";
+import {
+  brl,
+  fmtDate,
+  seedEmployees,
+  seedExpenses,
+  uid,
+  useCollection,
+  type Employee,
+  type Expense,
+} from "@/lib/crm-store";
 
 export const Route = createFileRoute("/despesas")({
   head: () => ({
@@ -38,9 +47,11 @@ const nova = (): Expense => ({
 
 function DespesasPage() {
   const { items, add, update, remove } = useCollection<Expense>("crm.expenses", seedExpenses);
+  const { items: employees } = useCollection<Employee>("crm.employees.v2", seedEmployees);
   const [draft, setDraft] = useState<Expense | null>(null);
   const total = items.reduce((a, e) => a + e.valor, 0);
   const aberto = items.filter((e) => !e.pago).reduce((a, e) => a + e.valor, 0);
+  const producaoValor = employees.reduce((a, e) => a + e.producao * (e.custo ?? 0), 0);
 
   return (
     <>
@@ -54,9 +65,15 @@ function DespesasPage() {
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard label="Total lançado" value={brl(total)} icon={Receipt} />
         <StatCard label="Em aberto" value={brl(aberto)} hint="Despesas ainda não pagas" icon={CheckCircle2} />
+        <StatCard
+          label="Funcionários"
+          value={brl(producaoValor)}
+          hint="Soma da produção em dinheiro"
+          icon={Users}
+        />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-card">
@@ -80,10 +97,11 @@ function DespesasPage() {
                 <td className="px-4 py-3">
                   <button
                     onClick={() => update(e.id, { pago: !e.pago })}
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      e.pago ? "bg-primary text-primary-foreground" : "bg-accent/15 text-accent"
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      e.pago ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
                     }`}
                   >
+                    {e.pago && <CheckCircle2 className="h-3.5 w-3.5" />}
                     {e.pago ? "Pago" : "Em aberto"}
                   </button>
                 </td>

@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { fmtDate, seedEmployees, uid, useCollection, type Employee } from "@/lib/crm-store";
+import { brl, fmtDate, seedEmployees, uid, useCollection, type Employee } from "@/lib/crm-store";
 
 export const Route = createFileRoute("/funcionarios")({
   head: () => ({
@@ -35,10 +35,11 @@ const novo = (): Employee => ({
   admissao: new Date().toISOString().slice(0, 10),
   meta: 300,
   producao: 0,
+  custo: 0,
 });
 
 function FuncionariosPage() {
-  const { items, add, update, remove } = useCollection<Employee>("crm.employees", seedEmployees);
+  const { items, add, update, remove } = useCollection<Employee>("crm.employees.v2", seedEmployees);
   const [draft, setDraft] = useState<Employee | null>(null);
   const totalProd = items.reduce((a, e) => a + e.producao, 0);
   const totalMeta = items.reduce((a, e) => a + e.meta, 0);
@@ -103,6 +104,13 @@ function FuncionariosPage() {
                 </div>
               </div>
 
+              {e.custo > 0 && (
+                <div className="mt-3 flex items-center justify-between rounded-xl bg-success/10 px-3 py-2 text-sm">
+                  <span className="text-xs font-medium text-muted-foreground">Valor da produção</span>
+                  <span className="font-bold text-success">{brl(e.producao * (e.custo ?? 0))}</span>
+                </div>
+              )}
+
               <div className="mt-4 flex items-center gap-2">
                 <Button
                   size="sm"
@@ -159,6 +167,15 @@ function FuncionariosPage() {
                   type="number"
                   value={draft.meta}
                   onChange={(e) => setDraft({ ...draft, meta: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs text-muted-foreground">Custo por unidade (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={draft.custo}
+                  onChange={(e) => setDraft({ ...draft, custo: Number(e.target.value) })}
                 />
               </div>
             </div>

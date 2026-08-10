@@ -48,6 +48,7 @@ export type Employee = {
   admissao: string;
   meta: number;
   producao: number;
+  custo: number;
 };
 
 export type StockItem = {
@@ -147,9 +148,9 @@ export const seedContracts: Contract[] = [
 ];
 
 export const seedEmployees: Employee[] = [
-  { id: "e1", nome: "Francisco Alves", funcao: "Torneiro", telefone: "(88) 99100-0011", admissao: daysFromNow(-800), meta: 400, producao: 372 },
-  { id: "e2", nome: "Raimunda Lima", funcao: "Acabamento", telefone: "(88) 99100-0022", admissao: daysFromNow(-420), meta: 350, producao: 361 },
-  { id: "e3", nome: "Pedro Henrique", funcao: "Envernizamento", telefone: "(88) 99100-0033", admissao: daysFromNow(-120), meta: 300, producao: 240 },
+  { id: "e1", nome: "Francisco Alves", funcao: "Torneiro", telefone: "(88) 99100-0011", admissao: daysFromNow(-800), meta: 400, producao: 372, custo: 2 },
+  { id: "e2", nome: "Raimunda Lima", funcao: "Acabamento", telefone: "(88) 99100-0022", admissao: daysFromNow(-420), meta: 350, producao: 361, custo: 1.5 },
+  { id: "e3", nome: "Pedro Henrique", funcao: "Envernizamento", telefone: "(88) 99100-0033", admissao: daysFromNow(-120), meta: 300, producao: 240, custo: 1.2 },
 ];
 
 export const seedStock: StockItem[] = [

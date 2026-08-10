@@ -8,10 +8,11 @@ import {
   Receipt,
   Menu,
   X,
-  Axe,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { LogoMark, LogoLockup } from "@/components/Logo";
+
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },

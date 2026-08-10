@@ -52,16 +52,12 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-4">
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
-        <Axe className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-sidebar-foreground">Padre Cícero</p>
-        <p className="truncate text-[11px] text-sidebar-foreground/60">Fábrica de Cabos</p>
-      </div>
+      <LogoMark className="h-10 w-10 shrink-0" />
+      <LogoLockup className="min-w-0" />
     </div>
   );
 }
+
 
 export function Shell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);

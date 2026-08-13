@@ -40,6 +40,7 @@ import {
   seedContracts,
   seedStock,
   seedExpenses,
+  CONTRACT_STAGES,
   type ActivityType,
   type Client,
 } from "@/lib/crm-store";
@@ -91,9 +92,15 @@ function Dashboard() {
   const recebidos = clients.items.filter((c) => c.stage === "perdido");
   const abertos = clients.items.filter((c) => c.stage === "novo" || c.stage === "proposta");
   const aReceber = clients.items.filter((c) => c.stage === "ganho");
-  const receita = recebidos.reduce((s, c) => s + c.valor, 0);
+  const receita =
+    recebidos.reduce((s, c) => s + c.valor, 0) +
+    contracts.items
+      .filter((c) => c.etapa === "finalizado" || c.status === "Encerrado")
+      .reduce((s, c) => s + c.valor, 0);
   const projecao =
-    aReceber.reduce((s, c) => s + c.valor, 0) + abertos.reduce((s, c) => s + c.valor, 0);
+    aReceber.reduce((s, c) => s + c.valor, 0) +
+    abertos.reduce((s, c) => s + c.valor, 0) +
+    contracts.items.filter((c) => c.etapa === "producao").reduce((s, c) => s + c.valor, 0);
   const totalDespesas = expenses.items.reduce((s, e) => s + e.valor, 0);
   const baixoEstoque = stock.items.filter((s) => s.quantidade <= s.minimo);
   const ativos = contracts.items.filter((c) => c.status !== "Encerrado");
@@ -126,13 +133,13 @@ function Dashboard() {
         <StatCard
           label="Recebidos"
           value={brl(receita)}
-          hint={`${recebidos.length} pedidos recebidos`}
+          hint={`${recebidos.length} pedidos + ${contracts.items.filter((c) => c.etapa === "finalizado" || c.status === "Encerrado").length} contratos`}
           icon={Trophy}
         />
         <StatCard
           label="Projeção"
           value={brl(projecao)}
-          hint={`${aReceber.length} pedidos a receber`}
+          hint={`${aReceber.length} pedidos a receber + ${contracts.items.filter((c) => c.etapa === "producao").length} contratos em produção`}
           icon={TrendingUp}
         />
         <StatCard
@@ -255,6 +262,57 @@ function Dashboard() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Nenhuma entrega pendente.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4 rounded-2xl border bg-card p-0 shadow-card">
+        <CardHeader>
+          <CardTitle className="text-base">Contratos</CardTitle>
+        </CardHeader>
+        <CardContent className="px-6 pb-2">
+          <Table className="min-w-[640px]">
+            <TableHeader className="bg-secondary/60">
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Cliente</TableHead>
+                <TableHead>Número</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Etapa</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {contracts.items.map((c) => {
+                const etapaLabel =
+                  CONTRACT_STAGES.find((s) => s.id === c.etapa)?.label ?? c.etapa;
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.cliente}</TableCell>
+                    <TableCell>{c.numero}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          c.status === "Ativo"
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{etapaLabel}</TableCell>
+                    <TableCell className="text-right font-bold">{brl(c.valor)}</TableCell>
+                  </TableRow>
+                );
+              })}
+              {contracts.items.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    Nenhum contrato cadastrado.
                   </TableCell>
                 </TableRow>
               )}

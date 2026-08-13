@@ -113,21 +113,51 @@ function Field({
 function Contratos() {
   const contracts = useCollection<Contract>("crm.contracts", seedContracts);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Contract | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<Contract | null>(null);
   const [draft, setDraft] = useState<ContractDraft>(emptyDraft());
   const [dragging, setDragging] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const set = (patch: Partial<ContractDraft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const total = contracts.items.reduce((s, c) => s + c.valor, 0);
+
+  const filtered = contracts.items.filter((c) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return c.numero.toLowerCase().includes(q) || c.cliente.toLowerCase().includes(q);
+  });
+
+  const openNew = () => {
+    setEditing(null);
+    setDraft({ ...emptyDraft(), numero: newContrato(contracts.items.map((c) => c.numero)) });
+    setOpen(true);
+  };
+
+  const openEdit = (c: Contract) => {
+    const { id: _id, ...rest } = c;
+    setDraft(rest);
+    setEditing(c);
+    setOpen(true);
+  };
 
   const save = () => {
     if (!draft.cliente.trim()) {
       toast.error("Informe o cliente.");
       return;
     }
-    contracts.add(draft);
-    toast.success("Contrato cadastrado");
-    logActivity("contrato", `Contrato ${draft.numero} cadastrado`);
+    const numero = draft.numero.trim() || newContrato(contracts.items.map((c) => c.numero));
+    const item = { ...draft, numero };
+    if (editing) {
+      contracts.update(editing.id, item);
+      toast.success(`Contrato ${numero} atualizado`);
+      logActivity("contrato", `Contrato ${numero} atualizado`);
+    } else {
+      contracts.add(item);
+      toast.success(`Contrato ${numero} cadastrado`);
+      logActivity("contrato", `Contrato ${numero} cadastrado`);
+    }
     setOpen(false);
   };
 
@@ -139,6 +169,7 @@ function Contratos() {
   };
 
   const remove = (c: Contract) => {
+    setConfirmRemove(null);
     contracts.remove(c.id);
     toast.success("Contrato excluído");
     logActivity("contrato", `Contrato ${c.numero} excluído`);
@@ -161,12 +192,21 @@ function Contratos() {
         title="Contratos"
         subtitle={`${contracts.items.length} contratos · ${brl(total)}`}
         action={
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={openNew}>
             <Plus />
             Novo contrato
           </Button>
         }
       />
+
+      <div className="mb-4">
+        <Input
+          placeholder="Buscar por número (PD-XXXX) ou nome do cliente..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="max-w-md"
+        />
+      </div>
 
       <Tabs defaultValue="kanban">
         <TabsList className="mb-4">
@@ -186,20 +226,19 @@ function Contratos() {
               <Table className="min-w-[720px]">
                 <TableHeader className="bg-secondary/60">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Número</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Número</TableHead>
                     <TableHead>Início</TableHead>
                     <TableHead>Fim</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
-                    <TableHead className="text-right">ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contracts.items.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.numero}</TableCell>
-                      <TableCell>{c.cliente}</TableCell>
+                  {filtered.map((c) => (
+                    <TableRow key={c.id} onClick={() => openEdit(c)} className="cursor-pointer">
+                      <TableCell className="font-medium">{c.cliente}</TableCell>
+                      <TableCell>{c.numero}</TableCell>
                       <TableCell>{fmtDate(c.inicio)}</TableCell>
                       <TableCell>{fmtDate(c.fim)}</TableCell>
                       <TableCell>
@@ -216,25 +255,12 @@ function Contratos() {
                         </button>
                       </TableCell>
                       <TableCell className="text-right font-bold">{brl(c.valor)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() => remove(c)}
-                            aria-label={`Excluir contrato ${c.numero}`}
-                          >
-                            <Trash2 />
-                          </Button>
-                        </div>
-                      </TableCell>
                     </TableRow>
                   ))}
-                  {contracts.items.length === 0 && (
+                  {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                        Nenhum contrato cadastrado.
+                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                        Nenhum contrato encontrado.
                       </TableCell>
                     </TableRow>
                   )}
@@ -247,7 +273,7 @@ function Contratos() {
         <TabsContent value="kanban">
           <div className="grid gap-4 md:grid-cols-3">
             {CONTRACT_STAGES.map((s) => {
-              const list = contracts.items.filter((c) => (c.etapa ?? "producao") === s.id);
+              const list = filtered.filter((c) => (c.etapa ?? "producao") === s.id);
               return (
                 <div
                   key={s.id}
@@ -269,16 +295,17 @@ function Contratos() {
                         setDragging(c.id);
                       }}
                       onDragEnd={() => setDragging(null)}
+                      onClick={() => openEdit(c)}
                       className={cn(
-                        "rounded-xl border p-3 shadow-card cursor-grab transition-opacity active:cursor-grabbing",
+                        "rounded-xl border p-3 shadow-card cursor-pointer transition-opacity hover:border-primary/50",
                         cardTone[c.etapa ?? "producao"],
                         dragging === c.id && "opacity-40",
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate font-semibold">{c.numero}</p>
-                          <p className="truncate text-xs text-muted-foreground">{c.cliente}</p>
+                          <p className="truncate font-semibold">{c.cliente}</p>
+                          <p className="truncate text-xs text-muted-foreground">{c.numero}</p>
                         </div>
                         <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                       </div>
@@ -309,20 +336,24 @@ function Contratos() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Novo contrato</DialogTitle>
-            <DialogDescription>Registre um novo contrato de fornecimento.</DialogDescription>
+            <DialogTitle>{editing ? `Editar contrato ${editing.numero}` : "Novo contrato"}</DialogTitle>
+            <DialogDescription>
+              {editing
+                ? `Atualize os dados do contrato de ${editing.cliente}.`
+                : "Registre um novo contrato de fornecimento."}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Número">
-              <Input value={draft.numero} onChange={(e) => set({ numero: e.target.value })} />
-            </Field>
             <Field label="Cliente">
               <Input
                 value={draft.cliente}
                 onChange={(e) => set({ cliente: e.target.value })}
                 placeholder="Nome do cliente"
               />
+            </Field>
+            <Field label="Número">
+              <Input value={draft.numero} onChange={(e) => set({ numero: e.target.value })} />
             </Field>
             <Field label="Início">
               <Input
@@ -363,10 +394,56 @@ function Contratos() {
           </div>
 
           <DialogFooter>
+            {editing && (
+              <Button
+                variant="outline"
+                className="mr-auto text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmRemove(editing)}
+              >
+                <Trash2 />
+                Excluir
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={save}>Salvar</Button>
+            <Button onClick={save}>{editing ? "Salvar alterações" : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={confirmRemove !== null}
+        onOpenChange={(v) => !v && setConfirmRemove(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir contrato?</DialogTitle>
+            <DialogDescription>
+              {confirmRemove ? (
+                <>
+                  Tem certeza que deseja excluir o contrato{" "}
+                  <strong>
+                    {confirmRemove.numero} ({confirmRemove.cliente})
+                  </strong>
+                  ? Esta ação não pode ser desfeita.
+                </>
+              ) : (
+                "Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRemove(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmRemove && remove(confirmRemove)}
+            >
+              <Trash2 />
+              Excluir
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

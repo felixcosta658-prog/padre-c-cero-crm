@@ -171,7 +171,14 @@ export const daysFromNow = (n: number) => {
 export const today = () => iso(new Date());
 
 export const newPedido = () => `PED-${Math.floor(1000 + Math.random() * 9000)}`;
-export const newContrato = () => `CT-${Math.floor(1000 + Math.random() * 9000)}`;
+export const newContrato = (existing: string[] = []) => {
+  let max = 0;
+  for (const n of existing) {
+    const m = /^PD-(\d+)$/.exec(n.trim());
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `PD-${String(max + 1).padStart(4, "0")}`;
+};
 
 export const diasRestantes = (entrega: string) => {
   if (!entrega) return null;
@@ -301,7 +308,7 @@ export const seedContracts: Contract[] = [
   {
     id: "k1",
     createdAt: daysFromNow(-30),
-    numero: "CT-0021",
+    numero: "PD-0021",
     cliente: "Constru Sertão",
     valor: 12750,
     inicio: daysFromNow(-30),
@@ -312,7 +319,7 @@ export const seedContracts: Contract[] = [
   {
     id: "k2",
     createdAt: daysFromNow(-90),
-    numero: "CT-0018",
+    numero: "PD-0018",
     cliente: "Agro Lar Ferragens",
     valor: 8400,
     inicio: daysFromNow(-90),

@@ -1,7 +1,7 @@
 import { useMemo, useState, type DragEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Plus, FileDown, Pencil, Trash2, Table2, LayoutGrid, GripVertical, Loader2, Paperclip, Upload, X } from "lucide-react";
+import { Plus, FileDown, Pencil, Trash2, Table2, LayoutGrid, GripVertical, Loader2, Paperclip, Upload, X, ArrowLeftRight } from "lucide-react";
 
 import { PageHeader } from "@/components/Shell";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,10 @@ import {
   UFS,
   stageLabel,
   seedClients,
+  seedKanban,
   logActivity,
   type Client,
+  type KanbanCard,
   type Stage,
 } from "@/lib/crm-store";
 import { exportClientsPdf } from "@/lib/pdf";
@@ -68,7 +70,7 @@ export const Route = createFileRoute("/clientes")({
 const stageTone: Record<Stage, string> = {
   novo: "bg-secondary text-secondary-foreground",
   proposta: "bg-accent/15 text-accent",
-  ganho: "bg-orange-500 text-white",
+  ganho: "bg-warning text-white",
   perdido: "bg-success/15 text-success",
 };
 
@@ -83,19 +85,13 @@ type ClientDraft = Omit<Client, "id">;
 
 const emptyDraft = (): ClientDraft => ({
   createdAt: today(),
-  pedido: newPedido(),
   nome: "",
   email: "",
   telefone: "",
   empresa: "",
   cidade: "",
   uf: "CE",
-  valor: 0,
-  entrega: today(),
   observacoes: "",
-  stage: "novo",
-  comprovanteNome: "",
-  comprovante: "",
 });
 
 function maskPhone(value: string) {
@@ -125,32 +121,46 @@ function Field({
 
 function Clientes() {
   const clients = useCollection<Client>("crm.clients", seedClients);
+  const kanban = useCollection<KanbanCard>("crm.kanban", seedKanban);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"alfabetica" | "recentes" | "entrega">("alfabetica");
   const [editing, setEditing] = useState<Client | null>(null);
   const [open, setOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<Client | null>(null);
+  const [confirmRemoveCard, setConfirmRemoveCard] = useState<KanbanCard | null>(null);
   const [draft, setDraft] = useState<ClientDraft>(emptyDraft());
   const [dragging, setDragging] = useState<string | null>(null);
+
+  const clientById = useMemo(
+    () => new Map(clients.items.map((c) => [c.id, c])),
+    [clients.items],
+  );
+
+  const cardByClientId = useMemo(
+    () => new Map(kanban.items.map((k) => [k.clientId, k])),
+    [kanban.items],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = clients.items.filter((c) => {
       if (!q) return true;
-      return [c.nome, c.empresa, c.pedido, c.cidade, c.email].join(" ").toLowerCase().includes(q);
+      return [c.nome, c.empresa, c.cidade, c.email].join(" ").toLowerCase().includes(q);
     });
     return [...list].sort((a, b) =>
       sort === "recentes"
         ? (b.createdAt || "").localeCompare(a.createdAt || "")
         : sort === "entrega"
-          ? (a.entrega || "9999").localeCompare(b.entrega || "9999")
+          ? (cardByClientId.get(a.id)?.entrega || "9999").localeCompare(
+              cardByClientId.get(b.id)?.entrega || "9999",
+            )
           : a.nome.localeCompare(b.nome, "pt-BR"),
     );
-  }, [clients.items, query, sort]);
+  }, [clients.items, cardByClientId, query, sort]);
 
   const totalCarteira = useMemo(
-    () => clients.items.reduce((s, c) => s + c.valor, 0),
-    [clients.items],
+    () => kanban.items.reduce((s, k) => s + k.valor, 0),
+    [kanban.items],
   );
 
   const openNew = () => {
@@ -178,7 +188,15 @@ function Clientes() {
       toast.success("Cliente atualizado");
       logActivity("cliente", `Cliente "${draft.nome}" atualizado`);
     } else {
-      clients.add(draft);
+      const id = clients.add(draft);
+      kanban.add({
+        clientId: id,
+        createdAt: today(),
+        pedido: newPedido(),
+        valor: 0,
+        entrega: today(),
+        stage: "novo",
+      });
       toast.success("Cliente cadastrado");
       logActivity("cliente", `Cliente "${draft.nome}" cadastrado`);
     }
@@ -188,22 +206,49 @@ function Clientes() {
   const remove = (c: Client) => {
     setConfirmRemove(null);
     clients.remove(c.id);
-    toast.success("Cliente excluído");
-    logActivity("cliente", `Cliente "${c.nome}" excluído`);
+    kanban.items.filter((k) => k.clientId === c.id).forEach((k) => kanban.remove(k.id));
+    toast.success("Cliente excluído do cadastro");
+    logActivity("cliente", `Cliente "${c.nome}" excluído do cadastro`);
+  };
+
+  const removeCard = (k: KanbanCard) => {
+    setConfirmRemoveCard(null);
+    kanban.remove(k.id);
+    toast.success("Pedido removido do Kanban. Cliente mantido no cadastro.");
+    logActivity("cliente", `Pedido "${k.pedido}" removido do Kanban`);
+  };
+
+  const addToKanban = (c: Client) => {
+    if (cardByClientId.has(c.id)) {
+      toast.info("Cliente já está no Kanban.");
+      return;
+    }
+    kanban.add({
+      clientId: c.id,
+      createdAt: today(),
+      pedido: newPedido(),
+      valor: 0,
+      entrega: today(),
+      stage: "novo",
+    });
+    toast.success(`"${c.nome}" enviado ao Kanban`);
+    logActivity("cliente", `Cliente "${c.nome}" enviado ao Kanban`);
   };
 
   const onDrop = (e: DragEvent<HTMLDivElement>, stage: Stage) => {
     e.preventDefault();
     const id = e.dataTransfer.getData("text/plain");
     if (!id) return;
-    const c = clients.items.find((x) => x.id === id);
-    clients.update(id, { stage });
+    const card = kanban.items.find((x) => x.id === id);
+    if (!card) return;
+    kanban.update(id, { stage });
+    const client = clientById.get(card.clientId);
     toast.success(`Movido para "${stageLabel(stage)}"`);
-    if (c) logActivity("cliente", `Pedido de "${c.nome}" movido para "${stageLabel(stage)}"`);
+    if (client) logActivity("cliente", `Pedido de "${client.nome}" movido para "${stageLabel(stage)}"`);
     setDragging(null);
   };
 
-  const attachComprovante = async (c: Client, file: File | null) => {
+  const attachComprovante = async (k: KanbanCard, file: File | null) => {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
       toast.error("Imagem muito grande. Máximo 2MB.");
@@ -215,26 +260,41 @@ function Clientes() {
       reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
       reader.readAsDataURL(file);
     });
-    clients.update(c.id, { comprovante: dataUrl, comprovanteNome: file.name });
-    clients.update(c.id, { stage: "perdido" });
+    kanban.update(k.id, { comprovante: dataUrl, comprovanteNome: file.name });
+    kanban.update(k.id, { stage: "perdido" });
     toast.success("Comprovante anexado e pedido movido para Recebido");
-    logActivity("cliente", `Comprovante anexado ao pedido de "${c.nome}" (Recebido)`);
+    logActivity("cliente", `Comprovante anexado ao pedido de "${clientById.get(k.clientId)?.nome}" (Recebido)`);
   };
 
   return (
     <>
       <PageHeader
         title="Clientes e Pedidos"
-        subtitle={`${clients.items.length} registros · ${brl(totalCarteira)} em carteira`}
+        subtitle={`${clients.items.length} clientes cadastrados · ${brl(totalCarteira)} em carteira no Kanban`}
         action={
           <>
-            <Button variant="outline" onClick={() => exportClientsPdf(filtered)}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                exportClientsPdf(
+                  filtered.map((c) => ({
+                    pedido: cardByClientId.get(c.id)?.pedido ?? "—",
+                    nome: c.nome,
+                    cidade: c.cidade,
+                    uf: c.uf,
+                    stage: cardByClientId.get(c.id)?.stage ?? "novo",
+                    entrega: cardByClientId.get(c.id)?.entrega ?? c.createdAt,
+                    valor: cardByClientId.get(c.id)?.valor ?? 0,
+                  })),
+                )
+              }
+            >
               <FileDown />
               PDF
             </Button>
             <Button onClick={openNew}>
               <Plus />
-              Novo
+              Novo cliente
             </Button>
           </>
         }
@@ -274,55 +334,75 @@ function Clientes() {
 
         <TabsContent value="tabela">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((c) => (
-              <div
-                key={c.id}
-                className="shadow-card gap-4 rounded-2xl border bg-card p-4"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-bold">{c.nome}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {c.empresa || "—"}
+            {filtered.map((c) => {
+              const card = cardByClientId.get(c.id);
+              return (
+                <div
+                  key={c.id}
+                  className="shadow-card gap-4 rounded-2xl border bg-card p-4"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-bold">{c.nome}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {c.empresa || "—"}
+                      </p>
+                    </div>
+                    {card && (
+                      <Badge className={stageTone[card.stage]}>{stageLabel(card.stage)}</Badge>
+                    )}
+                  </div>
+                  <div className="mt-3 flex flex-col gap-1.5 text-sm">
+                    {c.telefone && <p className="text-muted-foreground">Tel: {c.telefone}</p>}
+                    {c.email && (
+                      <p className="break-all text-muted-foreground">E-mail: {c.email}</p>
+                    )}
+                    <p className="text-muted-foreground">
+                      {c.cidade ? `${c.cidade}/${c.uf}` : c.uf || "—"}
                     </p>
+                    {card?.comprovante && (
+                      <p className="flex items-center gap-1.5 text-success">
+                        <Paperclip className="size-3.5" />
+                        Comprovante anexado
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-1 border-t pt-3">
+                    <div>
+                      {!card && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addToKanban(c)}
+                        >
+                          <ArrowLeftRight />
+                          Enviar ao Kanban
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(c)}
+                        aria-label={`Editar ${c.nome}`}
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => setConfirmRemove(c)}
+                        aria-label={`Excluir ${c.nome}`}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-col gap-1.5 text-sm">
-                  {c.telefone && <p className="text-muted-foreground">Tel: {c.telefone}</p>}
-                  {c.email && (
-                    <p className="break-all text-muted-foreground">E-mail: {c.email}</p>
-                  )}
-                  <p className="text-muted-foreground">
-                    {c.cidade ? `${c.cidade}/${c.uf}` : c.uf || "—"}
-                  </p>
-                  {c.comprovante && (
-                    <p className="flex items-center gap-1.5 text-success">
-                      <Paperclip className="size-3.5" />
-                      Comprovante anexado
-                    </p>
-                  )}
-                </div>
-                <div className="mt-3 flex items-center justify-end gap-1 border-t pt-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEdit(c)}
-                    aria-label={`Editar ${c.nome}`}
-                  >
-                    <Pencil />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => setConfirmRemove(c)}
-                    aria-label={`Excluir ${c.nome}`}
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {filtered.length === 0 && (
               <p className="col-span-full py-8 text-center text-muted-foreground">
                 Nenhum cliente encontrado.
@@ -334,7 +414,7 @@ function Clientes() {
         <TabsContent value="kanban">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {STAGES.map((s) => {
-              const list = clients.items.filter((c) => c.stage === s.id);
+              const list = kanban.items.filter((k) => k.stage === s.id);
               return (
                 <div
                   key={s.id}
@@ -346,109 +426,113 @@ function Clientes() {
                     <span className="text-sm font-semibold">{s.label}</span>
                     <Badge className="bg-card text-muted-foreground">{list.length}</Badge>
                   </div>
-                  {list.map((c) => (
-                    <div
-                      key={c.id}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", c.id);
-                        e.dataTransfer.effectAllowed = "move";
-                        setDragging(c.id);
-                      }}
-                      onDragEnd={() => setDragging(null)}
-                      onClick={() => openEdit(c)}
-                      className={cn(
-                        "rounded-xl border p-3 shadow-card cursor-grab transition-opacity active:cursor-grabbing",
-                        cardTone[c.stage] || "bg-card",
-                        dragging === c.id && "opacity-40",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">{c.nome}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {c.empresa || "—"}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirmRemove(c);
-                            }}
-                            aria-label={`Excluir ${c.nome}`}
-                            className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                          <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                        </div>
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                        {c.observacoes || "Sem observações"}
-                      </p>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <Badge className={stageTone[c.stage]}>{c.pedido}</Badge>
-                        <span className="text-xs font-bold">{brl(c.valor)}</span>
-                      </div>
-                      <p className="mt-1.5 text-[11px] text-muted-foreground">
-                        Entrega {fmtDate(c.entrega)}
-                      </p>
-
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {c.stage === "ganho" && (
-                            <Loader2 className="size-3.5 animate-spin text-orange-500" />
-                          )}
-                          {c.comprovante ? (
+                  {list.map((k) => {
+                    const client = clientById.get(k.clientId);
+                    return (
+                      <div
+                        key={k.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", k.id);
+                          e.dataTransfer.effectAllowed = "move";
+                          setDragging(k.id);
+                        }}
+                        onDragEnd={() => setDragging(null)}
+                        onClick={() => client && openEdit(client)}
+                        className={cn(
+                          "rounded-xl border p-3 shadow-card cursor-grab transition-opacity active:cursor-grabbing",
+                          cardTone[k.stage] || "bg-card",
+                          dragging === k.id && "opacity-40",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">{client?.nome || "—"}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {client?.empresa || "—"}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(c.comprovante);
+                                setConfirmRemoveCard(k);
                               }}
-                              className="flex items-center gap-1 text-[11px] text-success hover:underline"
+                              aria-label={`Remover pedido ${k.pedido} do Kanban`}
+                              title="Remover do Kanban (mantém o cliente no cadastro)"
+                              className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                             >
-                              <Paperclip className="size-3.5" />
-                              <span className="max-w-[90px] truncate">
-                                {c.comprovanteNome || "Comprovante"}
-                              </span>
+                              <Trash2 className="size-4" />
                             </button>
-                          ) : (
-                            <label className="flex cursor-pointer items-center gap-1 text-[11px] text-muted-foreground hover:text-accent">
-                              <Upload className="size-3.5" />
-                              Anexar
-                              <input
-                                type="file"
-                                accept="image/*,application/pdf"
-                                className="hidden"
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
+                            <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                          {client?.observacoes || "Sem observações"}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <Badge className={stageTone[k.stage]}>{k.pedido}</Badge>
+                          <span className="text-xs font-bold">{brl(k.valor)}</span>
+                        </div>
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          Entrega {fmtDate(k.entrega)}
+                        </p>
+
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {k.stage === "ganho" && (
+                              <Loader2 className="size-3.5 animate-spin text-warning" />
+                            )}
+                            {k.comprovante ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
                                   e.stopPropagation();
-                                  attachComprovante(c, e.target.files?.[0] ?? null);
-                                  e.target.value = "";
+                                  window.open(k.comprovante);
                                 }}
-                              />
-                            </label>
+                                className="flex items-center gap-1 text-[11px] text-success hover:underline"
+                              >
+                                <Paperclip className="size-3.5" />
+                                <span className="max-w-[90px] truncate">
+                                  {k.comprovanteNome || "Comprovante"}
+                                </span>
+                              </button>
+                            ) : (
+                              <label className="flex cursor-pointer items-center gap-1 text-[11px] text-muted-foreground hover:text-accent">
+                                <Upload className="size-3.5" />
+                                Anexar
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  className="hidden"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    attachComprovante(k, e.target.files?.[0] ?? null);
+                                    e.target.value = "";
+                                  }}
+                                />
+                              </label>
+                            )}
+                          </div>
+                          {k.comprovante && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                kanban.update(k.id, { comprovante: "", comprovanteNome: "" });
+                                toast.success("Comprovante removido");
+                              }}
+                              className="text-[11px] text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="size-3.5" />
+                            </button>
                           )}
                         </div>
-                        {c.comprovante && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              clients.update(c.id, { comprovante: "", comprovanteNome: "" });
-                              toast.success("Comprovante removido");
-                            }}
-                            className="text-[11px] text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="size-3.5" />
-                          </button>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {list.length === 0 && (
                     <div className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">
                       Arraste pedidos para cá
@@ -467,8 +551,8 @@ function Clientes() {
             <DialogTitle>{editing ? `Editar ${editing.nome}` : "Novo cliente"}</DialogTitle>
             <DialogDescription>
               {editing
-                ? `Atualizando o pedido ${editing.pedido}.`
-                : "Cadastre um novo cliente e pedido."}
+                ? `Atualizando o cadastro de ${editing.nome}.`
+                : "Cadastre um novo cliente na base de clientes."}
             </DialogDescription>
           </DialogHeader>
 
@@ -568,15 +652,15 @@ function Clientes() {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Excluir cliente?</DialogTitle>
+            <DialogTitle>Excluir cliente do cadastro?</DialogTitle>
             <DialogDescription>
               {confirmRemove ? (
                 <>
-                  Tem certeza que deseja excluir <strong>{confirmRemove.nome}</strong> (pedido{" "}
-                  {confirmRemove.pedido})? Esta ação não pode ser desfeita.
+                  Tem certeza que deseja excluir <strong>{confirmRemove.nome}</strong> do
+                  cadastro de clientes? Esta ação não pode ser desfeita.
                 </>
               ) : (
-                "Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita."
+                "Tem certeza que deseja excluir este cliente do cadastro? Esta ação não pode ser desfeita."
               )}
             </DialogDescription>
           </DialogHeader>
@@ -589,7 +673,42 @@ function Clientes() {
               onClick={() => confirmRemove && remove(confirmRemove)}
             >
               <Trash2 />
-              Excluir
+              Excluir do cadastro
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={confirmRemoveCard !== null}
+        onOpenChange={(v) => !v && setConfirmRemoveCard(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remover do Kanban?</DialogTitle>
+            <DialogDescription>
+              {confirmRemoveCard ? (
+                <>
+                  O pedido <strong>{confirmRemoveCard.pedido}</strong> será removido do Kanban.
+                  O cliente{" "}
+                  <strong>{clientById.get(confirmRemoveCard.clientId)?.nome ?? "—"}</strong>{" "}
+                  permanece no cadastro de clientes.
+                </>
+              ) : (
+                "Remover o pedido do Kanban? O cliente permanece no cadastro."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRemoveCard(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmRemoveCard && removeCard(confirmRemoveCard)}
+            >
+              <Trash2 />
+              Remover do Kanban
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/Shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -79,6 +80,8 @@ const emptyDraft = (): ContractDraft => ({
   fim: today(),
   status: "Ativo",
   etapa: "producao",
+  pago: false,
+  descricao: "",
 });
 
 const etapaTone: Record<ContractStage, string> = {
@@ -168,6 +171,13 @@ function Contratos() {
     logActivity("contrato", `Contrato ${c.numero} marcado como ${next.toLowerCase()}`);
   };
 
+  const togglePago = (c: Contract) => {
+    const next = !c.pago;
+    contracts.update(c.id, { pago: next });
+    toast.success(next ? "Pagamento confirmado." : "Pagamento marcado como pendente.");
+    logActivity("contrato", `Contrato ${c.numero} com pagamento ${next ? "confirmado" : "pendente"}`);
+  };
+
   const remove = (c: Contract) => {
     setConfirmRemove(null);
     contracts.remove(c.id);
@@ -231,6 +241,8 @@ function Contratos() {
                     <TableHead>Início</TableHead>
                     <TableHead>Fim</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Pagamento</TableHead>
+                    <TableHead>Descrição</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -243,7 +255,10 @@ function Contratos() {
                       <TableCell>{fmtDate(c.fim)}</TableCell>
                       <TableCell>
                         <button
-                          onClick={() => toggleStatus(c)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStatus(c);
+                          }}
                           className={cn(
                             "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                             c.status === "Ativo"
@@ -254,12 +269,33 @@ function Contratos() {
                           {c.status}
                         </button>
                       </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePago(c);
+                          }}
+                          className={cn(
+                            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                            c.pago
+                              ? "bg-success text-white hover:bg-success/85"
+                              : "bg-warning/15 text-warning hover:bg-warning/25",
+                          )}
+                        >
+                          {c.pago ? "Pago" : "A receber"}
+                        </button>
+                      </TableCell>
+                      <TableCell className="max-w-[240px]">
+                        <span className="line-clamp-2 text-xs text-muted-foreground">
+                          {c.descricao || "—"}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right font-bold">{brl(c.valor)}</TableCell>
                     </TableRow>
                   ))}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                         Nenhum contrato encontrado.
                       </TableCell>
                     </TableRow>
@@ -316,9 +352,31 @@ function Contratos() {
                         </Badge>
                         <span className="text-xs font-bold">{brl(c.valor)}</span>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-muted-foreground">
-                        {fmtDate(c.inicio)} → {fmtDate(c.fim)}
-                      </p>
+                      {c.descricao && (
+                        <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+                          {c.descricao}
+                        </p>
+                      )}
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePago(c);
+                          }}
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                            c.pago
+                              ? "bg-success text-white"
+                              : "bg-warning/15 text-warning hover:bg-warning/25",
+                          )}
+                          title={c.pago ? "Pagamento confirmado" : "Confirmar pagamento"}
+                        >
+                          {c.pago ? "Pago" : "A receber"}
+                        </button>
+                        <span className="text-[11px] text-muted-foreground">
+                          {fmtDate(c.inicio)} → {fmtDate(c.fim)}
+                        </span>
+                      </div>
                     </div>
                   ))}
                   {list.length === 0 && (
@@ -372,6 +430,15 @@ function Contratos() {
                 value={draft.valor || ""}
                 onChange={(e) => set({ valor: Number(e.target.value) || 0 })}
                 placeholder="0"
+              />
+            </Field>
+            <Field label="Descrição do pedido" className="sm:col-span-2">
+              <Textarea
+                value={draft.descricao}
+                onChange={(e) => set({ descricao: e.target.value })}
+                placeholder="Descreva o pedido, produtos, quantidades ou informações adicionais..."
+                rows={4}
+                className="min-h-20"
               />
             </Field>
             <Field label="Etapa" className="sm:col-span-2">

@@ -46,8 +46,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-sidebar-border px-5 py-4">
-        <LogoLockup className="w-full justify-center" />
+      <div className="border-b border-sidebar-border px-4 py-5">
+        <LogoLockup className="w-full" />
       </div>
       <div className="flex-1 overflow-y-auto py-4">
         <NavList onNavigate={onNavigate} />
@@ -64,7 +64,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="bg-sidebar fixed inset-y-0 left-0 z-40 hidden w-80 lg:block">
+      <aside className="bg-sidebar fixed inset-y-0 left-0 z-40 hidden w-72 lg:block">
         <SidebarContent />
       </aside>
 
@@ -74,7 +74,7 @@ export function Shell({ children }: { children: ReactNode }) {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <aside className="bg-sidebar absolute inset-y-0 left-0 flex w-80 flex-col shadow-2xl">
+          <aside className="bg-sidebar absolute inset-y-0 left-0 flex w-72 flex-col shadow-2xl">
             <button
               onClick={() => setOpen(false)}
               className="text-sidebar-foreground absolute top-4 right-4 rounded-md p-1.5 hover:bg-sidebar-accent"
@@ -87,7 +87,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="flex-1 lg:pl-80">
+      <div className="flex-1 lg:pl-72">
         <header className="bg-background/85 sticky top-0 z-30 border-b backdrop-blur lg:hidden">
           <div className="flex h-14 items-center gap-3 px-4">
             <button

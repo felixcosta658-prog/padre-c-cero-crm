@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 /* ------------------------------------------------------------------ */
 /* Tipos                                                               */
@@ -48,16 +48,22 @@ export const UFS = [
 export type Client = {
   id: string;
   createdAt: string;
-  pedido: string;
   nome: string;
   email: string;
   telefone: string;
   empresa: string;
   cidade: string;
   uf: string;
+  observacoes: string;
+};
+
+export type KanbanCard = {
+  id: string;
+  clientId: string;
+  createdAt: string;
+  pedido: string;
   valor: number;
   entrega: string;
-  observacoes: string;
   stage: Stage;
   comprovanteNome?: string;
   comprovante?: string;
@@ -81,6 +87,8 @@ export type Contract = {
   fim: string;
   status: string;
   etapa: ContractStage;
+  pago: boolean;
+  descricao: string;
 };
 
 export type Employee = {
@@ -245,61 +253,84 @@ export const seedClients: Client[] = [
   {
     id: "c1",
     createdAt: daysFromNow(-6),
-    pedido: "PED-1001",
     nome: "João Batista",
     email: "joao.batista@agrolar.com.br",
     telefone: "(88) 99812-3445",
     empresa: "Agro Lar Ferragens",
     cidade: "Juazeiro do Norte",
     uf: "CE",
-    valor: 4800,
-    entrega: daysFromNow(3),
     observacoes: "500 cabos de enxada, madeira tratada.",
-    stage: "proposta",
   },
   {
     id: "c2",
     createdAt: daysFromNow(-20),
-    pedido: "PED-1002",
     nome: "Maria Souza",
     email: "maria.souza@construsertao.com.br",
     telefone: "(87) 99654-2211",
     empresa: "Constru Sertão",
     cidade: "Petrolina",
     uf: "PE",
-    valor: 12750,
-    entrega: daysFromNow(10),
     observacoes: "Cabos de marreta, entrega parcelada.",
-    stage: "ganho",
   },
   {
     id: "c3",
     createdAt: daysFromNow(-2),
-    pedido: "PED-1003",
     nome: "Antônio Ferreira",
     email: "antonio.ferreira@ferragensbr.com.br",
     telefone: "(85) 98123-7788",
     empresa: "Ferragens BR",
     cidade: "Fortaleza",
     uf: "CE",
-    valor: 3200,
-    entrega: daysFromNow(15),
     observacoes: "Primeiro contato pela feira.",
-    stage: "novo",
   },
   {
     id: "c4",
     createdAt: daysFromNow(-12),
-    pedido: "PED-1004",
     nome: "Carla Mendes",
     email: "carla.mendes@lojaverde.com.br",
     telefone: "(83) 98765-4321",
     empresa: "Loja Verde",
     cidade: "Campina Grande",
     uf: "PB",
+    observacoes: "Preço acima do orçamento do cliente.",
+  },
+];
+
+export const seedKanban: KanbanCard[] = [
+  {
+    id: "kb1",
+    clientId: "c1",
+    createdAt: daysFromNow(-6),
+    pedido: "PED-1001",
+    valor: 4800,
+    entrega: daysFromNow(3),
+    stage: "proposta",
+  },
+  {
+    id: "kb2",
+    clientId: "c2",
+    createdAt: daysFromNow(-20),
+    pedido: "PED-1002",
+    valor: 12750,
+    entrega: daysFromNow(10),
+    stage: "ganho",
+  },
+  {
+    id: "kb3",
+    clientId: "c3",
+    createdAt: daysFromNow(-2),
+    pedido: "PED-1003",
+    valor: 3200,
+    entrega: daysFromNow(15),
+    stage: "novo",
+  },
+  {
+    id: "kb4",
+    clientId: "c4",
+    createdAt: daysFromNow(-12),
+    pedido: "PED-1004",
     valor: 2100,
     entrega: daysFromNow(-5),
-    observacoes: "Preço acima do orçamento do cliente.",
     stage: "perdido",
   },
 ];
@@ -315,6 +346,8 @@ export const seedContracts: Contract[] = [
     fim: daysFromNow(60),
     status: "Ativo",
     etapa: "producao",
+    pago: false,
+    descricao: "",
   },
   {
     id: "k2",
@@ -326,6 +359,8 @@ export const seedContracts: Contract[] = [
     fim: daysFromNow(-10),
     status: "Encerrado",
     etapa: "finalizado",
+    pago: true,
+    descricao: "",
   },
 ];
 
@@ -437,6 +472,126 @@ export const seedExpenses: Expense[] = [
 /* Hook de persistência                                                */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Store compartilhado (reativo entre páginas)                          */
+/* ------------------------------------------------------------------ */
+
+type StoreEntry<T> = {
+  items: T[];
+  listeners: Set<() => void>;
+};
+
+const stores = new Map<string, StoreEntry<unknown>>();
+
+const CLIENTS_KEY = "crm.clients";
+const KANBAN_KEY = "crm.kanban";
+
+function migrateLegacyClients() {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(CLIENTS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+    // formato antigo: registros misturavam cadastro + card (possuíam `stage`)
+    const hasLegacyShape = parsed.some(
+      (c) => c && typeof c === "object" && "stage" in c && "pedido" in c,
+    );
+    if (!hasLegacyShape) return;
+    const kanbanRaw = window.localStorage.getItem(KANBAN_KEY);
+    if (kanbanRaw) return;
+    const cards: KanbanCard[] = parsed.map((c) => ({
+      id: `kb-${c.id}`,
+      clientId: c.id,
+      createdAt: c.createdAt ?? daysFromNow(0),
+      pedido: c.pedido ?? newPedido(),
+      valor: c.valor ?? 0,
+      entrega: c.entrega ?? today(),
+      stage: c.stage ?? "novo",
+      comprovanteNome: c.comprovanteNome,
+      comprovante: c.comprovante,
+    }));
+    const clients: Client[] = parsed.map((c) => ({
+      id: c.id,
+      createdAt: c.createdAt ?? daysFromNow(0),
+      nome: c.nome,
+      email: c.email,
+      telefone: c.telefone,
+      empresa: c.empresa,
+      cidade: c.cidade,
+      uf: c.uf,
+      observacoes: c.observacoes,
+    }));
+    window.localStorage.setItem(KANBAN_KEY, JSON.stringify(cards));
+    window.localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+  } catch {
+    // ignora migração com falha
+  }
+}
+
+migrateLegacyClients();
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    const entry = stores.get(e.key ?? "");
+    if (!entry) return;
+    try {
+      if (!e.newValue) return;
+      const parsed = JSON.parse(e.newValue);
+      if (Array.isArray(parsed)) {
+        entry.items = parsed;
+        entry.listeners.forEach((cb) => cb());
+      }
+    } catch {
+      // ignora payload inválido
+    }
+  });
+}
+
+function getOrCreateStore<T>(key: string, seed: T[]): StoreEntry<T> {
+  let entry = stores.get(key) as StoreEntry<T> | undefined;
+  if (!entry) {
+    entry = { items: seed, listeners: new Set() };
+    stores.set(key, entry as StoreEntry<unknown>);
+  }
+  return entry;
+}
+
+function loadFromStorage<T>(key: string, fallback: T[]): T[] {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as T[];
+    }
+  } catch {
+    // storage corrompido — mantém fallback
+  }
+  return fallback;
+}
+
+function persistToStorage<T>(key: string, items: T[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(items));
+  } catch {
+    // ignora falha de storage
+  }
+}
+
+function commitStore<T>(
+  key: string,
+  seed: T[],
+  updater: (prev: T[]) => T[],
+) {
+  const entry = getOrCreateStore<T>(key, seed);
+  const next = updater(entry.items);
+  entry.items = next;
+  persistToStorage(key, next);
+  entry.listeners.forEach((cb) => cb());
+}
+
 export type Collection<T extends { id: string }> = {
   items: T[];
   setItems: React.Dispatch<React.SetStateAction<T[]>>;
@@ -447,43 +602,56 @@ export type Collection<T extends { id: string }> = {
 };
 
 export function useCollection<T extends { id: string }>(key: string, seed: T[]): Collection<T> {
-  const [items, setItems] = useState<T[]>(seed);
+  const entry = getOrCreateStore<T>(key, seed);
+
+  const subscribe = useCallback(
+    (cb: () => void) => {
+      entry.listeners.add(cb);
+      return () => {
+        entry.listeners.delete(cb);
+      };
+    },
+    [entry],
+  );
+
+  const getSnapshot = useCallback(() => entry.items, [entry]);
+
+  const items = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setItems(parsed as T[]);
-      }
-    } catch {
-      // storage corrompido — mantém o seed
+    const loaded = loadFromStorage<T>(key, seed);
+    if (loaded !== entry.items) {
+      entry.items = loaded;
+      entry.listeners.forEach((cb) => cb());
     }
     setReady(true);
   }, [key]);
-
-  useEffect(() => {
-    if (!ready || typeof window === "undefined") return;
-    window.localStorage.setItem(key, JSON.stringify(items));
-  }, [items, ready, key]);
+  const setItems = useCallback<React.Dispatch<React.SetStateAction<T[]>>>(
+    (updater) => {
+      commitStore<T>(key, seed, (prev) =>
+        typeof updater === "function" ? (updater as (p: T[]) => T[])(prev) : updater,
+      );
+    },
+    [key, seed],
+  );
 
   const api = useMemo<Omit<Collection<T>, "items" | "setItems" | "ready">>(() => {
     return {
       add: (item) => {
         const id = item.id ?? uid();
-        setItems((prev) => [{ ...(item as T), id }, ...prev]);
+        commitStore<T>(key, seed, (prev) => [{ ...(item as T), id }, ...prev]);
         return id;
       },
       update: (id, patch) => {
-        setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+        commitStore<T>(key, seed, (prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
       },
       remove: (id) => {
-        setItems((prev) => prev.filter((it) => it.id !== id));
+        commitStore<T>(key, seed, (prev) => prev.filter((it) => it.id !== id));
       },
     };
-  }, []);
+  }, [key, seed]);
 
   return { items, setItems, ready, ...api };
 }

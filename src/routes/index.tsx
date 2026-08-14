@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
 import {
   Users,
   Trophy,
@@ -37,12 +38,14 @@ import {
   nomeMes,
   diasRestantes,
   seedClients,
+  seedKanban,
   seedContracts,
   seedStock,
   seedExpenses,
   CONTRACT_STAGES,
   type ActivityType,
   type Client,
+  type KanbanCard,
 } from "@/lib/crm-store";
 
 const typeLabel: Record<ActivityType, string> = {
@@ -84,35 +87,32 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const clients = useCollection<Client>("crm.clients", seedClients);
+  const kanban = useCollection<KanbanCard>("crm.kanban", seedKanban);
   const stock = useCollection("crm.stock", seedStock);
   const expenses = useCollection("crm.expenses", seedExpenses);
   const contracts = useCollection("crm.contracts", seedContracts);
   const activities = useActivity();
 
-  const recebidos = clients.items.filter((c) => c.stage === "perdido");
-  const abertos = clients.items.filter((c) => c.stage === "novo" || c.stage === "proposta");
-  const aReceber = clients.items.filter((c) => c.stage === "ganho");
-  const receita =
-    recebidos.reduce((s, c) => s + c.valor, 0) +
-    contracts.items
-      .filter((c) => c.etapa === "finalizado" || c.status === "Encerrado")
-      .reduce((s, c) => s + c.valor, 0);
-  const projecao =
-    aReceber.reduce((s, c) => s + c.valor, 0) +
-    abertos.reduce((s, c) => s + c.valor, 0) +
-    contracts.items.filter((c) => c.etapa === "producao").reduce((s, c) => s + c.valor, 0);
+  const clientById = useMemo(
+    () => new Map(clients.items.map((c) => [c.id, c])),
+    [clients.items],
+  );
+
+  const contratosPagos = contracts.items.filter((c) => c.pago);
+  const contratosAReceber = contracts.items.filter((c) => !c.pago);
+
+  const receita = contratosPagos.reduce((s, c) => s + c.valor, 0);
+  const projecao = contratosAReceber.reduce((s, c) => s + c.valor, 0);
   const totalDespesas = expenses.items.reduce((s, e) => s + e.valor, 0);
   const baixoEstoque = stock.items.filter((s) => s.quantidade <= s.minimo);
-  const ativos = contracts.items.filter((c) => c.status !== "Encerrado");
+  const ativos = contracts.items;
 
-  const proximos = clients.items
-    .filter((c) => c.stage !== "perdido")
+  const proximos = kanban.items
+    .filter((k) => k.stage !== "perdido")
     .sort((a, b) => (a.entrega || "9999").localeCompare(b.entrega || "9999"))
     .slice(0, 5);
 
-  const entradasMes = recebidos
-    .filter((c) => noMesAtual(c.createdAt))
-    .reduce((s, c) => s + c.valor, 0);
+  const entradasMes = receita;
   const saidasMes = expenses.items
     .filter((e) => noMesAtual(e.data))
     .reduce((s, e) => s + e.valor, 0);
@@ -127,19 +127,19 @@ function Dashboard() {
         <StatCard
           label="Contratos Ativos"
           value={ativos.length}
-          hint={`${contracts.items.length} contratos no total`}
+          hint={`${contracts.items.length} contratos cadastrados`}
           icon={Users}
         />
         <StatCard
           label="Recebidos"
           value={brl(receita)}
-          hint={`${recebidos.length} pedidos + ${contracts.items.filter((c) => c.etapa === "finalizado" || c.status === "Encerrado").length} contratos`}
+          hint={`${contratosPagos.length} contratos pagos`}
           icon={Trophy}
         />
         <StatCard
           label="Projeção"
           value={brl(projecao)}
-          hint={`${aReceber.length} pedidos a receber + ${contracts.items.filter((c) => c.etapa === "producao").length} contratos em produção`}
+          hint={`${contratosAReceber.length} contratos a receber`}
           icon={TrendingUp}
         />
         <StatCard
@@ -151,21 +151,21 @@ function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-2xl border bg-card p-0 shadow-card lg:col-span-2">
+        <Card className="rounded-2xl border bg-card shadow-card lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">
               Balanço do mês <span className="font-normal text-muted-foreground">— {mes}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 px-6">
-            <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+          <CardContent className="flex flex-col items-center gap-3 px-6">
+            <div className="flex w-full max-w-sm items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
               <span className="flex items-center gap-2 text-sm font-medium">
                 <ArrowUpRight className="text-success size-4" />
                 Entradas
               </span>
               <span className="text-success text-lg font-bold">{brl(entradasMes)}</span>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+            <div className="flex w-full max-w-sm items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
               <span className="flex items-center gap-2 text-sm font-medium">
                 <ArrowDownRight className="text-destructive size-4" />
                 Saídas
@@ -174,7 +174,7 @@ function Dashboard() {
             </div>
             <div
               className={cn(
-                "flex items-center justify-between rounded-xl px-4 py-3",
+                "flex w-full max-w-sm items-center justify-between rounded-xl px-4 py-3",
                 lucroLiquido >= 0
                   ? "bg-success/15 text-success"
                   : "bg-destructive/15 text-destructive",
@@ -189,13 +189,13 @@ function Dashboard() {
         <Card
           className={`rounded-2xl border p-0 shadow-card ${
             baixoEstoque.length > 0
-              ? "border-orange-400 bg-orange-100"
+              ? "border-warning/40 bg-warning/15"
               : "border bg-card"
           }`}
         >
           <CardHeader className="flex-row items-center gap-2 space-y-0">
             <AlertTriangle
-              className={baixoEstoque.length > 0 ? "text-orange-500" : "text-accent"}
+              className={baixoEstoque.length > 0 ? "text-warning" : "text-accent"}
             />
             <CardTitle className="text-base">Estoque baixo</CardTitle>
           </CardHeader>
@@ -206,7 +206,7 @@ function Dashboard() {
               baixoEstoque.map((s) => (
                 <div key={s.id} className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium">{s.nome}</span>
-                  <Badge className="bg-orange-500/20 text-orange-600">
+                  <Badge className="bg-warning/20 text-warning">
                     {s.quantidade} {s.unidade}
                   </Badge>
                 </div>
@@ -233,14 +233,15 @@ function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {proximos.map((c) => {
-                const restam = diasRestantes(c.entrega);
+              {proximos.map((k) => {
+                const restam = diasRestantes(k.entrega);
+                const client = clientById.get(k.clientId);
                 return (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.pedido}</TableCell>
-                    <TableCell>{c.nome}</TableCell>
-                    <TableCell>{stageLabel(c.stage)}</TableCell>
-                    <TableCell>{fmtDate(c.entrega)}</TableCell>
+                  <TableRow key={k.id}>
+                    <TableCell className="font-medium">{k.pedido}</TableCell>
+                    <TableCell>{client?.nome ?? "—"}</TableCell>
+                    <TableCell>{stageLabel(k.stage)}</TableCell>
+                    <TableCell>{fmtDate(k.entrega)}</TableCell>
                     <TableCell>
                       {restam === null ? (
                         "—"
@@ -254,7 +255,7 @@ function Dashboard() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right font-bold">{brl(c.valor)}</TableCell>
+                    <TableCell className="text-right font-bold">{brl(k.valor)}</TableCell>
                   </TableRow>
                 );
               })}
@@ -282,6 +283,7 @@ function Dashboard() {
                 <TableHead>Número</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Etapa</TableHead>
+                <TableHead>Pagamento</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
@@ -305,13 +307,24 @@ function Dashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{etapaLabel}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          c.pago
+                            ? "bg-success/15 text-success"
+                            : "bg-warning/15 text-warning"
+                        }
+                      >
+                        {c.pago ? "Pago" : "A receber"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-bold">{brl(c.valor)}</TableCell>
                   </TableRow>
                 );
               })}
               {contracts.items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Nenhum contrato cadastrado.
                   </TableCell>
                 </TableRow>

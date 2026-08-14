@@ -1,6 +1,16 @@
-import { brl, fmtDate, stageLabel, type Client } from "./crm-store";
+import { brl, fmtDate, stageLabel, type Stage } from "./crm-store";
 
-export function exportClientsPdf(clients: Client[]) {
+export type ClientPdfRow = {
+  pedido: string;
+  nome: string;
+  cidade: string;
+  uf: string;
+  stage: Stage;
+  entrega: string;
+  valor: number;
+};
+
+export function exportClientsPdf(rows: ClientPdfRow[]) {
   const w = window.open("", "_blank", "width=1000,height=800");
   if (!w) return;
 
@@ -12,9 +22,9 @@ export function exportClientsPdf(clients: Client[]) {
     minute: "2-digit",
   });
 
-  const total = clients.reduce((s, c) => s + c.valor, 0);
+  const total = rows.reduce((s, c) => s + c.valor, 0);
 
-  const rows = clients
+  const body = rows
     .map(
       (c) => `
       <tr>
@@ -62,7 +72,7 @@ export function exportClientsPdf(clients: Client[]) {
         </tr>
       </thead>
       <tbody>
-        ${rows}
+        ${body}
       </tbody>
     </table>
     <p class="total">Total: ${brl(total)}</p>
